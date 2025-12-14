@@ -1,0 +1,54 @@
+# If you want to know what is the EPA of the teams or your favorite team of the NFL, you get this code and copy in your program RStudio. 
+# This code is of OFFENSE EPA vs DEFENSE EPA and get an average of each team of epa_per_by_play. Anyway, i hate use R. 
+# You can serach for weeks or years, but this code is funcionally. Goodl luck searching data of NFL.
+
+<img width="555" height="334" alt="Capturagggg" src="https://github.com/user-attachments/assets/e8340d22-84d9-483e-bd0b-4f99c81ce94a" />
+
+# AS SHOWN ABOVE THE IMAGE OF MY OFFENSE EPA v DEFENSE EPA BETWEEN WEEKS 6th to 14th OF FULL TEAMS OF NFL. WHAT TF SINCE WEEK 6TH TO 14TH THE BEST DEFENSE RIGHT NOW IS SEATTLE SEAHAWKS. WOW!!!
+# MY TABLE READS LIKE THIS ***MORE TO HIGH, GOOD OFFENSE, MORE TO DOWN, BAD OFFENSE***. NOW ***MORE TO LEFT, GOOD DEFENSE, MORE TO RIGHT, BAD DEFENSE.
+
+library(tidyverse)
+library(nflfastR)
+library(ggimage)
+
+pbp <- load_pbp(2025) %>%
+  filter(week >=1 & week <= 5) %>%
+  filter(!is.na(epa))
+
+off_epa_2025 <- pbp %>%
+  group_by(posteam) %>%
+  summarise(off_epa_per_play = mean(epa, na.rm = TRUE))
+
+def_epa_2025 <- pbp %>%
+  filter(!is.na(epa)) %>%
+  group_by(defteam) %>%
+  summarise(def_epa_per_play = mean(epa, na.rm = TRUE)) 
+
+team_epa_2025 <- off_epa_2025 %>%
+  rename(team = posteam) %>%
+  left_join(def_epa_2025 %>% rename(team = defteam), by = "team")
+
+team_epa_2025_full <- team_epa_2025 %>%
+  left_join(teams_colors_logos %>% select(team_abbr, team_logo_espn),
+            by = c("team" = "team_abbr"))
+
+ggplot() +
+  geom_smooth(data = team_epa_2025,
+              aes(x = def_epa_per_play, y = off_epa_per_play),
+              method = "lm", se = FALSE, color = "blue") +
+  geom_hline(yintercept = mean(team_epa_2025$off_epa_per_play), linetype = "dashed") +
+  geom_vline(xintercept = mean(team_epa_2025$def_epa_per_play), linetype = "dashed") +
+  geom_image(data = team_epa_2025_full,
+             aes(x = def_epa_per_play, y = off_epa_per_play, image = team_logo_espn),
+             size = 0.05, asp = 16/9, show.legend = FALSE) +
+  theme_minimal() +
+  labs(
+    title = "EPA OFENSIVA VS EPA DEFENSIVO (WEEKS 1-5, SEASON 2025)",
+    subtitle = "aCarti2s | nflfastR",
+    x = "EPA DEFENSIVo (más bajo = mejor)",
+    y = "EPA OFENSIVO (más izquierda = mejor)"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 10, hjust = 0.5)
+  )
