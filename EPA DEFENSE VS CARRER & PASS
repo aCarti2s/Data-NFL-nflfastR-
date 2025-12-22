@@ -1,0 +1,62 @@
+#This is the second script and you can use it if you want to know what is the EPA of the teams or your favorite team of the NFL
+#Im hope that i can help you and good luck
+
+library(dplyr)
+library(nflfastR)
+library(ggplot2)
+library(tidyr)
+library(ggimage)
+
+pbp <- load_pbp(2025) 
+
+def_epa <- pbp %>%
+  filter(
+    !is.na(epa),
+    play_type %in% c("pass", "run"),
+    !is.na(defteam)
+  ) %>%
+  group_by(defteam, play_type) %>%
+  summarise(
+    epa = mean(epa),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = play_type,
+    values_from = epa,
+    values_fill = 0
+  ) %>%
+  mutate(
+    def_epa_run = -run,
+    def_epa_pass = -pass
+  ) %>%
+  select(defteam, def_epa_run, def_epa_pass) %>%
+  left_join(
+    nflfastR::teams_colors_logos,
+    by = c("defteam" = "team_abbr")
+  )
+
+avg_run <- mean(def_epa$def_epa_run, na.rm = TRUE)
+avg_pass <- mean(def_epa$def_epa_pass, na.rm = TRUE)
+
+ggplot(def_epa) +
+  geom_image(
+    aes(
+      x = def_epa_run,
+      y = def_epa_pass,
+      image = team_logo_wikipedia
+    ),
+    size = 0.05
+  ) +
+  geom_vline(xintercept = avg_run, linetype = "dashed", color = "black", alpha = 0.6) +
+  geom_hline(yintercept = avg_pass, linetype = "dashed", color = "black", alpha = 0.6) +
+  labs(
+    title = "EPA DEFENSIVO POR JUGADA",
+    subtitle = "@aCarti2s | nflfastR | Weeks 1:15",
+    x = "EPA DEFENSIVO vs Corrida",
+    y = "EPA DEFENSIVO vs Pase",
+  ) +
+  theme(
+    plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 10, hjust = 0.5)
+  )
+  theme_minimal()
